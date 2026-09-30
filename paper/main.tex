@@ -1,0 +1,233 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+
+\newtheorem{proposition}{Proposition}
+
+\title{Regime-Aware Spectral Risk Estimation\\
+for Cost-Constrained Statistical Arbitrage}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This paper studies whether random matrix theory (RMT) covariance regularization
+improves the risk allocation of a cost-constrained statistical arbitrage strategy.
+The proposed strategy separates the return signal from the risk model: a
+pre-specified residual mean-reversion signal determines expected returns, while
+spectral covariance estimates determine portfolio risk. We propose a
+regime-aware estimator that blends long- and short-window cleaned covariance
+matrices using a rolling measure of correlation drift. The estimator's
+mathematical validity and empirical value are separate questions. We establish
+positive semidefiniteness of the blend and specify a walk-forward design to test
+whether it improves out-of-sample risk and net performance. No empirical result
+is claimed in this draft.
+\end{abstract}
+
+\section{Research question and contribution}
+
+The central question is whether adapting the covariance risk model to detected
+changes in correlation structure improves a statistical arbitrage portfolio after
+transaction costs.
+
+The proposed extension is a regime-aware blend of long- and short-window RMT
+covariance estimates. The blend is designed to retain the stability of a longer
+estimation window while responding to changes indicated by a shorter window.
+Its usefulness is an empirical hypothesis, not an assumed result. The literature
+review must establish whether this exact construction and evaluation have already
+been studied.
+
+\section{Signal and portfolio model}
+
+Let $r_t \in \mathbb{R}^N$ denote the vector of asset returns at time $t$.
+A separate signal model produces a forecast $\widehat{\mu}_t \in \mathbb{R}^N$.
+For example, asset returns may first be decomposed into factor and residual
+components:
+\[
+    r_t = B f_t + \varepsilon_t,
+\]
+where $f_t$ is a vector of common factors, $B$ is a factor loading matrix, and
+$\varepsilon_t$ contains residual returns.
+
+A possible mean-reversion signal uses standardized residuals:
+\[
+    z_{i,t} = \frac{\widehat{\varepsilon}_{i,t}}{\widehat{s}_{i,t}},
+    \qquad
+    \widehat{\mu}_{i,t} = -\theta_i z_{i,t}.
+\]
+The factor model, residual scale, and parameters $\theta_i$ must be estimated
+using information available at time $t$ only. This signal specification is a
+starting point; its predictive value must be tested independently of the
+covariance estimator.
+
+Given a covariance estimate $\widehat{\Sigma}_t$, portfolio weights are chosen
+by solving
+\[
+\widehat{w}_t =
+\arg\max_{w \in \mathcal{W}}
+\left\{
+    \widehat{\mu}_t^\top w
+    - \frac{\lambda}{2} w^\top \widehat{\Sigma}_t w
+    - c \lVert w-w_{t-1}\rVert_1
+\right\}.
+\]
+Here $\lambda > 0$ controls risk aversion, $c \geq 0$ represents proportional
+trading costs, and $\mathcal{W}$ contains leverage, position, and exposure
+constraints. These choices must be fixed or calibrated using training data, not
+the final test period.
+
+\section{Spectral covariance estimation}
+
+Let $X \in \mathbb{R}^{T \times N}$ be a rolling matrix of demeaned,
+standardized returns, with $T$ observations and $N$ assets. The sample
+correlation matrix is
+\[
+    C = \frac{1}{T}X^\top X.
+\]
+Write its eigendecomposition as
+\[
+    C = U \operatorname{diag}(\lambda_1,\ldots,\lambda_N) U^\top.
+\]
+
+Under an idealized null model of independent standardized observations, the
+Marchenko--Pastur distribution describes the limiting eigenvalue spectrum as
+$N,T \to \infty$ with $q=N/T$ fixed. For unit population variance, the bulk
+support is
+\[
+    \lambda_- = (1-\sqrt{q})^2,
+    \qquad
+    \lambda_+ = (1+\sqrt{q})^2.
+\]
+This null model is a reference, not a complete model of financial returns.
+Serial dependence, heavy tails, and changing correlations can affect the
+spectrum and must be considered in robustness analysis.
+
+As a baseline cleaning rule, eigenvalues inside the estimated noise bulk may be
+replaced by their average, while selected eigenvalues above the bulk are retained.
+The cleaned correlation matrix is reconstructed from the original eigenvectors
+and transformed eigenvalues. Marginal volatilities are then restored to obtain a
+covariance estimate.
+
+\section{Proposed regime-aware extension}
+
+At each time $t$, construct cleaned correlation estimates from long and short
+rolling windows, denoted by $\widetilde{C}^{(L)}_t$ and
+$\widetilde{C}^{(S)}_t$. Define their relative drift as
+\[
+    d_t =
+    \frac{
+        \left\lVert \widetilde{C}^{(S)}_t -
+        \widetilde{C}^{(L)}_t \right\rVert_F
+    }{
+        \left\lVert \widetilde{C}^{(L)}_t \right\rVert_F + \epsilon
+    },
+\]
+where $\epsilon > 0$ prevents division by zero. For a scale parameter
+$\tau > 0$, set
+\[
+    \alpha_t = \frac{d_t}{d_t+\tau},
+    \qquad
+    \widetilde{C}^{(A)}_t =
+    (1-\alpha_t)\widetilde{C}^{(L)}_t
+    + \alpha_t \widetilde{C}^{(S)}_t.
+\]
+The parameter $\tau$, window lengths, and all preprocessing choices must be
+selected using training data only. The study will compare this rule with
+fixed-window RMT cleaning and established shrinkage baselines.
+
+\begin{proposition}
+If $\widetilde{C}^{(L)}_t$ and $\widetilde{C}^{(S)}_t$ are positive
+semidefinite and $0 \leq \alpha_t \leq 1$, then
+$\widetilde{C}^{(A)}_t$ is positive semidefinite.
+\end{proposition}
+
+\begin{proof}
+For any vector $x \in \mathbb{R}^N$,
+\[
+x^\top \widetilde{C}^{(A)}_t x
+=
+(1-\alpha_t)x^\top \widetilde{C}^{(L)}_t x
++\alpha_t x^\top \widetilde{C}^{(S)}_t x.
+\]
+Both quadratic forms on the right are nonnegative, and both coefficients are
+nonnegative. Therefore
+$x^\top \widetilde{C}^{(A)}_t x \geq 0$ for every $x$, which proves the claim.
+\end{proof}
+
+This proposition establishes mathematical validity of the blend. It does not
+establish that the estimator is more accurate or profitable.
+
+\section{Empirical hypotheses}
+
+The walk-forward study will test the following hypotheses:
+
+\begin{itemize}
+    \item[H1.] The regime-aware estimate reduces realized out-of-sample portfolio
+    variance relative to the sample covariance baseline.
+    \item[H2.] Any risk improvement persists after turnover and transaction costs.
+    \item[H3.] The estimated benefit is robust to reasonable changes in window
+    lengths, market periods, and cost assumptions.
+\end{itemize}
+
+These are hypotheses to test, not conclusions.
+
+\section{Evaluation design}
+
+All preprocessing, universe membership, parameter selection, signal estimation,
+and portfolio construction must use only information available at each decision
+date. Use nested walk-forward evaluation: an inner training period selects
+parameters, and a later untouched period evaluates them.
+
+Baselines should include equal weighting, sample covariance, a standard
+linear-shrinkage estimator, fixed-window RMT cleaning, and the proposed
+regime-aware blend. Report realized volatility, drawdown, turnover, gross and
+net performance, and uncertainty across time periods. Include transaction costs
+and short-borrow assumptions where applicable.
+
+The final study should disclose data sources, survivorship and look-ahead
+controls, missing-data rules, rebalance timing, and all parameter choices.
+
+\section{Results}
+
+\textit{To be completed after the empirical protocol is fixed and the experiments
+are run. Do not insert performance claims before then.}
+
+\section{Limitations}
+
+The Marchenko--Pastur benchmark assumes an idealized sampling model. Financial
+returns can violate its assumptions through serial dependence, heavy tails,
+heteroskedasticity, and structural breaks. The proposed drift statistic can also
+react to estimation noise. These issues motivate robustness checks; they do not
+guarantee that the proposed estimator will outperform its baselines.
+
+\begin{thebibliography}{9}
+
+\bibitem{marchenko-pastur}
+V. A. Mar\v{c}enko and L. A. Pastur.
+Distribution of eigenvalues for some sets of random matrices.
+\textit{Mathematics of the USSR-Sbornik}, 1(4):457--483, 1967.
+
+\bibitem{laloux}
+L. Laloux, P. Cizeau, J.-P. Bouchaud, and M. Potters.
+Noise dressing of financial correlation matrices.
+\textit{Physical Review Letters}, 83:1467--1470, 1999.
+
+\bibitem{markowitz}
+H. Markowitz.
+Portfolio selection.
+\textit{The Journal of Finance}, 7(1):77--91, 1952.
+
+\bibitem{ledoit-wolf}
+O. Ledoit and M. Wolf.
+Nonlinear shrinkage of the covariance matrix for portfolio selection:
+Markowitz meets Goldilocks.
+\textit{The Review of Financial Studies}, 30(12):4349--4388, 2017.
+
+\end{thebibliography}
+
+\end{document}

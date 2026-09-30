@@ -1,0 +1,27 @@
+project:
+  name: spectral-statistical-arbitrage
+  seed: 42
+
+data:
+  frequency: daily
+  return_type: log
+  start: null
+  end: null
+  universe: null
+
+estimation:
+  method: sample
+  lookback: 252
+  min_observations: 200
+  rmt:
+    method: marchenko_pastur
+    preserve_top_components: 0
+
+portfolio:
+  rebalance: monthly
+  max_gross_leverage: 1.0
+  max_position_weight: 0.05
+
+backtest:
+  transaction_cost_bps: 5
+  annualization_factor: 252
