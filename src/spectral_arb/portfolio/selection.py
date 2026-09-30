@@ -1,5 +1,8 @@
+"""Formation-window screening of candidate cointegrated pairs."""
+
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 from spectral_arb.portfolio.cointegration import (
@@ -15,8 +18,7 @@ def scan_cointegrated_pairs(
 ) -> pd.DataFrame:
     """Test every asset pair in a formation window.
 
-    The returned table is sorted by adjusted p-value. Use only the formation
-    period here; do not include the later trading or evaluation period.
+    Use only formation-period prices here, not trading or evaluation data.
     """
     if not isinstance(log_prices, pd.DataFrame):
         raise ValueError("log_prices must be a pandas DataFrame")
@@ -28,18 +30,19 @@ def scan_cointegrated_pairs(
         raise ValueError("asset names must be unique")
     if not all(isinstance(name, str) for name in log_prices.columns):
         raise ValueError("asset names must be strings")
-    if not log_prices.map(lambda value: pd.notna(value)).all().all():
-        raise ValueError("log_prices must not contain missing values")
 
-    # A fixed name ordering makes the Engle-Granger regression direction
-    # reproducible, independent of the DataFrame's input column order.
     names = sorted(log_prices.columns)
-    records: list[dict[str, float | str]] = []
+    ordered = log_prices[names]
+    values = ordered.to_numpy(dtype=np.float64)
+    if not np.isfinite(values).all():
+        raise ValueError("log_prices must contain only finite values")
+
+    records: list[dict[str, object]] = []
 
     for index, asset_a in enumerate(names):
         for asset_b in names[index + 1 :]:
-            series_a = log_prices[asset_a].to_numpy(dtype=float)
-            series_b = log_prices[asset_b].to_numpy(dtype=float)
+            series_a = ordered[asset_a].to_numpy(dtype=np.float64)
+            series_b = ordered[asset_b].to_numpy(dtype=np.float64)
 
             intercept, hedge_ratio = estimate_hedge_ratio(series_a, series_b)
             statistic, p_value = engle_granger_test(series_a, series_b)
@@ -56,9 +59,10 @@ def scan_cointegrated_pairs(
             )
 
     adjusted, selected = benjamini_yekutieli(
-        [record["p_value"] for record in records],
+        [float(record["p_value"]) for record in records],
         alpha=alpha,
     )
+
     for record, adjusted_p_value, is_selected in zip(
         records, adjusted, selected, strict=True
     ):
