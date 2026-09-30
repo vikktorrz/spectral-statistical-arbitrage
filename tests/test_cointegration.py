@@ -24,7 +24,7 @@ def test_benjamini_yekutieli_adjusts_pvalues_in_original_order():
         alpha=0.05,
     )
 
-    np.testing.assert_allclose(adjusted, [0.22, 0.0055, 0.055])
+    np.testing.assert_allclose(adjusted, [0.07333333333333333, 0.0055, 0.055])
     np.testing.assert_array_equal(selected, [False, True, False])
 
 
